@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+		<style>
+			.centre {
+			  margin: auto;
+			  border:1px solid #c3c3c3;
+			  width: 640px;
+			}
+	</style>
+
+	</head>
+
+
+	<body>
+		<div class="centre">
+			<canvas id="myCanvas" width="640" height="480" >
+
+			</canvas>
+		</div>
+		<div class="centre">
+			<input type="number" id="cell1" name="cell1" min="0" max="384">	
+			<input type="number" id="cell2" name="cell2" min="0" max="384">	
+			<input type="number" id="cell3" name="cell3" min="0" max="384">	
+			<input type="number" id="cell4" name="cell4" min="0" max="384">
+			<input type="number" id="cell5" name="cell5" min="0" max="384">	
+			<button type="button" id="update" onclick="update()">Update</button>
+			<button type="button" id="clearGrid" onclick="clearGrid()">Clear</button>	
+		</div>
+		
+		<div class="centre">
+			<img src="https://i.imgur.com/gdd13Oq.png" alt="grid showing cell indexes">
+		</div>
+		
+		
+		<script>
+			var canvas = document.getElementById("myCanvas");
+			var ctx = canvas.getContext("2d");
+			ctx.strokeStyle = "#000000";
+			
+			var cells = [];
+
+			var facexoffsets = [320, 0, 160, 320, 480, 320];
+			var faceyoffsets = [0, 160, 160, 160, 160, 320];
+
+			var i;
+			var j;
+			for(j=0;j<6;j++)
+			{
+				for(i=0;i<64;i++)
+				{
+					cells.push({face:j, status:false, row:Math.floor(i/8), col:i%8});
+				}
+			}
+			
+			draw();
+			
+			
+			
+			
+			function draw(){
+				ctx.clearRect(0,0,640,480);
+				for(i=0;i<384;i++)
+				{
+					if(cells[i].status){
+						ctx.fillRect(cells[i].col*20+facexoffsets[cells[i].face], cells[i].row*20+faceyoffsets[cells[i].face], 20, 20);
+					}
+					else{
+						ctx.strokeRect(cells[i].col*20+facexoffsets[cells[i].face], cells[i].row*20+faceyoffsets[cells[i].face], 20, 20);
+					}
+				}
+			}
+			
+			function update(){
+				cells[document.getElementById("cell1").value].status = true;
+				cells[document.getElementById("cell2").value].status = true;
+				cells[document.getElementById("cell3").value].status = true;
+				cells[document.getElementById("cell4").value].status = true;
+				cells[document.getElementById("cell5").value].status = true;	
+
+				draw();
+
+			}
+			
+			function clearGrid(){
+				var k;
+				for(k=0; k<384;k++){
+					cells[k].status=false;
+				}
+				draw();
+
+			}
+			
+			
+			
+
+		</script>
+
+
+
+	</body>
+	
+	
+	
+	
+</html>
