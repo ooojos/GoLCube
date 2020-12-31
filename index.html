@@ -31,9 +31,11 @@
 			<button type="button" id="step" onclick="step()">Step</button>
 			<button type="button" id="sspaceship" onclick="sspaceship()">Spaceship</button>	
 			<button type="button" id="sspaceship2" onclick="sspaceship2()">Spaceship 2</button>	
+			<button type="button" id="sspaceship3" onclick="sspaceship3()">Spaceship 3</button>	
 			<button type="button" id="glider" onclick="glider()">glider</button>		
 			<button type="button" id="run" onclick="run()">Run</button>				
 			<button type="button" id="random" onclick="random()">Rando</button>
+			<button type="button" id="a3spaceships" onclick="a3spaceships()">3 Spaceships</button>
 		</div>
 		
 		<div class="centre">
@@ -77,7 +79,7 @@
 [319,120,121,122,123,124,125,126,127,184],
 [1000,383,382,381,380,379,378,377,376,1000]],
 
-[[1000,0,8,18,24,32,40,48,56,1000],
+[[1000,0,8,16,24,32,40,48,56,1000],
 [71,128,129,130,131,132,133,134,135,192],
 [79,136,137,138,139,140,141,142,143,200],
 [87,144,145,146,147,148,149,150,151,208],
@@ -257,6 +259,52 @@
 				cells[234].status = true;
 				draw();
 			}
+			function sspaceship3(){
+				cells[265].status = true;
+				cells[258].status = true;
+				cells[259].status = true;
+				cells[260].status = true;
+				cells[268].status = true;
+				cells[276].status = true;
+				cells[284].status = true;
+				cells[291].status = true;
+				cells[289].status = true;
+				draw();
+			}
+			
+			function a3spaceships(){
+				cells[51].status = true;
+				cells[52].status = true;
+				cells[53].status = true;
+				cells[62].status = true;
+				cells[59].status = true;
+				cells[195].status = true;
+				cells[203].status = true;
+				cells[212].status = true;
+				cells[214].status = true;
+				
+				cells[83].status = true;
+				cells[86].status = true;
+				cells[95].status = true;
+				cells[103].status = true;
+				cells[111].status = true;
+				cells[110].status = true;
+				cells[109].status = true;
+				cells[108].status = true;
+				cells[99].status = true;
+				
+				cells[329].status = true;
+				cells[332].status = true;
+				cells[341].status = true;
+				cells[349].status = true;
+				cells[357].status = true;
+				cells[356].status = true;
+				cells[355].status = true;
+				cells[354].status = true;
+				cells[345].status = true;
+				draw();
+			}			
+			
 			
 			function glider(){
 				cells[210].status = true;
