@@ -148,6 +148,76 @@
 			
 			draw();
 			
+			canvas.onclick = function(e) {
+				event = e;
+				var clickX = event.layerX;
+				var clickY = event.layerY;
+				var face = -1;
+				if(clickX > 320 && clickX <480 && clickY < 160){
+					face = 1;				
+				}
+				if(clickY > 160 && clickY <  320){
+					if(clickX < 160){
+						face=2;
+					}
+					if(clickX > 160 && clickX < 320){
+						face=3;
+					}
+					if(clickX > 320 && clickX < 480){
+						face = 4;
+					}
+					if(clickX > 480){
+						face = 5
+					}
+				}
+				if(clickY > 320 && clickX > 320 && clickX < 480){
+					face = 6;
+				}
+				
+				
+				var row;
+				var col;
+				var idx;
+				if(face==1){
+					row = Math.floor(clickY / 20);
+					col = Math.floor((clickX - 320) / 20)
+					idx = row*8+col;
+
+				}
+				if(face==2){
+					row = Math.floor((clickY - 160) / 20);
+					col = Math.floor(clickX / 20);
+					idx = 64+(row*8)+col;
+				}
+				if(face==3){
+					row = Math.floor((clickY - 160) / 20);
+					col = Math.floor((clickX-160) / 20);
+					idx = 128+(row*8)+col;
+				}
+				if(face==4){
+					row = Math.floor((clickY - 160) / 20);
+					col = Math.floor((clickX -320) / 20);
+					idx = 192+(row*8)+col;
+				}
+				if(face==5){
+					row = Math.floor((clickY - 160) / 20);
+					col = Math.floor((clickX-480) / 20);
+					idx = 256+(row*8)+col;
+				}	
+				if(face==6){
+					row = Math.floor((clickY - 320) / 20);
+					col = Math.floor((clickX-320) / 20);
+					idx = 320+(row*8)+col;
+				}				
+
+				
+				cells[idx].status = true;
+				draw();				
+				console.log("face: " + face + " row: " + row + " col: " + col + " idx: " + idx);
+				
+				
+			}
+			
 			
 			
 			
@@ -201,7 +271,7 @@
 				for(ae=0;ae<384;ae++){
 					nextgen[ae]=false;
 				}
-				console.log(nextgen);
+				//console.log(nextgen);
 				for(ac=0;ac<384;ac++)
 				{
 					var nlist = cells[ac].neighbours;
@@ -222,7 +292,7 @@
 					}
 				}
 				var af;
-				console.log(nextgen);
+				//console.log(nextgen);
 				for(af=0;af<384;af++){
 					if(nextgen[af]){
 						cells[af].status = true;
