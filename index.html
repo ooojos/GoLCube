@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html>
 
 	<head>
-<meta content="text/html;charset=utf-8" http-equiv="Content-Type">
-<meta content="utf-8" http-equiv="encoding">
+		<meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+		<meta content="utf-8" http-equiv="encoding">
 
 		<style>
 			.centre {
@@ -11,13 +12,62 @@
 			  border:1px solid #c3c3c3;
 			  width: 640px;
 			}
-	</style>
+		</style>
+		
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"
+      integrity="sha512-zhHQR0/H5SEBL3Wn6yYSaTTZej12z0hVZKOv3TwCUXT1z5qeqGcXJLLrbERYRScEDDpYIJhPC1fk31gqR783iQ=="
+      crossorigin="anonymous" defer>
+		</script>
+	
+		<script src="https://cdn.jsdelivr.net/npm/gl-matrix@3.0.0/gl-matrix-min.js"></script>
+		
+		<!--
+for most samples webgl-utils only provides shader compiling/linking and
+canvas resizing because why clutter the examples with code that's the same in every sample.
+See https://webglfundamentals.org/webgl/lessons/webgl-boilerplate.html
+and https://webglfundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
+for webgl-utils, m3, m4, and webgl-lessons-ui.
+-->
+<script src="https://webglfundamentals.org/webgl/resources/webgl-utils.js"></script>
+<script src="https://webglfundamentals.org/webgl/resources/m4.js"></script>
+
+		
+<!-- vertex shader -->
+<script  id="vertex-shader-3d" type="x-shader/x-vertex">
+attribute vec4 a_position;
+
+uniform mat4 u_matrix;
+
+varying vec3 v_normal;
+
+void main() {
+  gl_Position = u_matrix * a_position;
+  v_normal = normalize(a_position.xyz);
+}
+</script>
+<!-- fragment shader -->
+<script  id="fragment-shader-3d" type="x-shader/x-fragment">
+precision mediump float;
+
+// Passed in from the vertex shader.
+varying vec3 v_normal;
+
+// The texture.
+uniform samplerCube u_texture;
+
+void main() {
+   gl_FragColor = textureCube(u_texture, normalize(v_normal));
+}
+</script>
+
+
 
 	</head>
 
 
 	<body>
 		<div class="centre">
+			<canvas id="canvas" width="640" height="480"></canvas>
 			<canvas id="myCanvas" width="640" height="480" >
 
 			</canvas>
@@ -33,20 +83,24 @@
 			<button type="button" id="sspaceship2" onclick="sspaceship2()">Spaceship 2</button>	
 			<button type="button" id="sspaceship3" onclick="sspaceship3()">Spaceship 3</button>	
 			<button type="button" id="glider" onclick="glider()">glider</button>		
-			<button type="button" id="run" onclick="run()">Run</button>				
+			<button type="button" id="run" onclick="run()">Run</button>		
+			<button type="button" id="stop" onclick="stop()">Stop</button>				
 			<button type="button" id="random" onclick="random()">Rando</button>
 			<button type="button" id="a3spaceships" onclick="a3spaceships()">3 Spaceships</button>
-		</div>
-		
+			<button type="button" id="odd" onclick="odd()">Odd</button>
+			<button type="button" id="draw3D" onclick="draw3dface()">Draw3Dface</button>
+		</div>	
 		<div class="centre">
 			<img src="https://i.imgur.com/gdd13Oq.png" alt="grid showing cell indexes">
 		</div>
 		
-		
 		<script>
+
 			var canvas = document.getElementById("myCanvas");
 			var ctx = canvas.getContext("2d");
 			ctx.strokeStyle = "#000000";
+			
+			var running = false;
 			
 			var cells = [];
 
@@ -56,6 +110,193 @@
 
 			var i;
 			var j;
+			
+			var canvas;
+			var gl;	
+			
+"use strict";
+  // Get A WebGL context
+  /** @type {HTMLCanvasElement} */
+  canvas3 = document.querySelector("#canvas");
+  gl = canvas3.getContext("webgl");
+  if (!gl) {
+    //
+  }
+
+  // setup GLSL program
+  var program = webglUtils.createProgramFromScripts(gl, ["vertex-shader-3d", "fragment-shader-3d"]);
+
+  // look up where the vertex data needs to go.
+  var positionLocation = gl.getAttribLocation(program, "a_position");
+
+  // lookup uniforms
+  var matrixLocation = gl.getUniformLocation(program, "u_matrix");
+  var textureLocation = gl.getUniformLocation(program, "u_texture");
+
+  // Create a buffer for positions
+  var positionBuffer = gl.createBuffer();
+  // Bind it to ARRAY_BUFFER (think of it as ARRAY_BUFFER = positionBuffer)
+  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+  // Put the positions in the buffer
+  setGeometry(gl);
+
+  // Create a texture.
+  var texture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_CUBE_MAP, texture);
+	
+  function radToDeg(r) {
+    return r * 180 / Math.PI;
+  }
+
+  function degToRad(d) {
+    return d * Math.PI / 180;
+  }
+
+  var fieldOfViewRadians = degToRad(60);
+  var modelXRotationRadians = degToRad(0);
+  var modelYRotationRadians = degToRad(0);
+
+  // Get the starting time.
+  var then = 0;
+
+  requestAnimationFrame(drawScene);
+  
+ // 	function foo() {
+//		draw3dface();
+//		setTimeout(foo, 1000);
+//	}
+//	foo();
+
+  // Draw the scene.
+  function drawScene(time) {
+    // convert to seconds
+    time *= 0.001;
+    // Subtract the previous time from the current time
+    var deltaTime = time - then;
+    // Remember the current time for the next frame.
+    then = time;
+	
+
+
+
+    webglUtils.resizeCanvasToDisplaySize(gl.canvas);
+
+    // Tell WebGL how to convert from clip space to pixels
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
+    gl.enable(gl.CULL_FACE);
+    gl.enable(gl.DEPTH_TEST);
+
+    // Animate the rotation
+    modelYRotationRadians += -0.3 * deltaTime;
+    modelXRotationRadians += -0.2 * deltaTime;
+
+    // Clear the canvas AND the depth buffer.
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    // Tell it to use our program (pair of shaders)
+    gl.useProgram(program);
+
+    // Turn on the position attribute
+    gl.enableVertexAttribArray(positionLocation);
+
+    // Bind the position buffer.
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+
+    // Tell the position attribute how to get data out of positionBuffer (ARRAY_BUFFER)
+    var size = 3;          // 3 components per iteration
+    var type = gl.FLOAT;   // the data is 32bit floats
+    var normalize = false; // don't normalize the data
+    var stride = 0;        // 0 = move forward size * sizeof(type) each iteration to get the next position
+    var offset = 0;        // start at the beginning of the buffer
+    gl.vertexAttribPointer(
+        positionLocation, size, type, normalize, stride, offset);
+
+    // Compute the projection matrix
+    var aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
+    var projectionMatrix =
+        m4.perspective(fieldOfViewRadians, aspect, 1, 2000);
+
+    var cameraPosition = [0, 0, 2];
+    var up = [0, 1, 0];
+    var target = [0, 0, 0];
+
+    // Compute the camera's matrix using look at.
+    var cameraMatrix = m4.lookAt(cameraPosition, target, up);
+
+    // Make a view matrix from the camera matrix.
+    var viewMatrix = m4.inverse(cameraMatrix);
+
+    var viewProjectionMatrix = m4.multiply(projectionMatrix, viewMatrix);
+
+    var matrix = m4.xRotate(viewProjectionMatrix, modelXRotationRadians);
+    matrix = m4.yRotate(matrix, modelYRotationRadians);
+
+    // Set the matrix.
+    gl.uniformMatrix4fv(matrixLocation, false, matrix);
+
+    // Tell the shader to use texture unit 0 for u_texture
+    gl.uniform1i(textureLocation, 0);
+
+    // Draw the geometry.
+    gl.drawArrays(gl.TRIANGLES, 0, 6 * 6);
+
+    requestAnimationFrame(drawScene);
+  }
+
+
+
+// Fill the buffer with the values that define a cube.
+function setGeometry(gl) {
+  var positions = new Float32Array(
+    [
+    -0.5, -0.5,  -0.5,
+    -0.5,  0.5,  -0.5,
+     0.5, -0.5,  -0.5,
+    -0.5,  0.5,  -0.5,
+     0.5,  0.5,  -0.5,
+     0.5, -0.5,  -0.5,
+
+    -0.5, -0.5,   0.5,
+     0.5, -0.5,   0.5,
+    -0.5,  0.5,   0.5,
+    -0.5,  0.5,   0.5,
+     0.5, -0.5,   0.5,
+     0.5,  0.5,   0.5,
+
+    -0.5,   0.5, -0.5,
+    -0.5,   0.5,  0.5,
+     0.5,   0.5, -0.5,
+    -0.5,   0.5,  0.5,
+     0.5,   0.5,  0.5,
+     0.5,   0.5, -0.5,
+
+    -0.5,  -0.5, -0.5,
+     0.5,  -0.5, -0.5,
+    -0.5,  -0.5,  0.5,
+    -0.5,  -0.5,  0.5,
+     0.5,  -0.5, -0.5,
+     0.5,  -0.5,  0.5,
+
+    -0.5,  -0.5, -0.5,
+    -0.5,  -0.5,  0.5,
+    -0.5,   0.5, -0.5,
+    -0.5,  -0.5,  0.5,
+    -0.5,   0.5,  0.5,
+    -0.5,   0.5, -0.5,
+
+     0.5,  -0.5, -0.5,
+     0.5,   0.5, -0.5,
+     0.5,  -0.5,  0.5,
+     0.5,  -0.5,  0.5,
+     0.5,   0.5, -0.5,
+     0.5,   0.5,  0.5,
+
+    ]);
+
+  gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
+  }
+  			
 			
 			var nmap = [[[1000,71,70,69,68,67,66,65,64,1000],
 [128,0,1,2,3,4,5,6,7,263],
@@ -218,28 +459,29 @@
 				
 			}
 			
+		
 			
 			
-			
-			function draw(){
-				ctx.clearRect(0,0,640,480);
-				for(i=0;i<384;i++)
-				{
-					if(cells[i].status){
-						ctx.fillRect(cells[i].col*20+facexoffsets[cells[i].face], cells[i].row*20+faceyoffsets[cells[i].face], 20, 20);
-					}
-					else{
-						ctx.strokeRect(cells[i].col*20+facexoffsets[cells[i].face], cells[i].row*20+faceyoffsets[cells[i].face], 20, 20);
-					}
-				}
+	function draw(){
+		ctx.clearRect(0,0,640,480);
+		for(i=0;i<384;i++)
+		{
+			if(cells[i].status){
+				ctx.fillRect(cells[i].col*20+facexoffsets[cells[i].face], cells[i].row*20+faceyoffsets[cells[i].face], 20, 20);
 			}
+			else{
+				ctx.strokeRect(cells[i].col*20+facexoffsets[cells[i].face], cells[i].row*20+faceyoffsets[cells[i].face], 20, 20);
+			}
+		}
+		draw3dface();
+	}
 			
-			function update(){
-				cells[document.getElementById("cell1").value].status = true;
-				draw();
+	function update(){
+		cells[document.getElementById("cell1").value].status = true;
+		draw();
 
-			}
-			
+	}
+	
 			function clearGrid(){
 				var k;
 				for(k=0; k<384;k++){
@@ -304,7 +546,173 @@
 				draw();
 			}
 			
-			function sspaceship(){
+			
+			
+			function run(){
+				running = true;
+				function runningfun(){
+					if(!running){return;}
+					step();
+					setTimeout(runningfun, 200);
+				}
+				runningfun();
+				
+			}
+			
+			function stop(){
+				running = false;
+			}
+			
+			function random(){
+				var ag;
+				for(ag=0;ag<384;ag++){
+					if(Math.random() < 0.5){
+						cells[ag].status=true;
+					}
+					else{
+						cells[ag].status=false;
+					}
+				}
+				draw();
+						
+			}
+			
+			function odd(){
+				var ag;
+				var ah;
+				for(ah=0;ah<8;ah+=4){
+				for(ag=ah;ag<384;ag+=9){
+					cells[ag].status=true;
+				}
+				draw();
+				}
+				
+						
+			}		
+		
+
+
+	function draw3dface(){
+	  
+		// Get A 2D context
+		/** @type {Canvas2DRenderingContext} */
+		const ctx = document.createElement("canvas").getContext("2d");
+
+		ctx.canvas.width = 128;
+		ctx.canvas.height = 128;
+
+		const faceInfos = [
+		{ target: gl.TEXTURE_CUBE_MAP_POSITIVE_X, faceColor: '#ADD8E6', textColor: '#F00', text: '1' },
+		{ target: gl.TEXTURE_CUBE_MAP_NEGATIVE_X, faceColor: '#ADD8E6', textColor: '#F00', text: '2' },
+		{ target: gl.TEXTURE_CUBE_MAP_POSITIVE_Y, faceColor: '#ADD8E6', textColor: '#F00', text: '3' },
+		{ target: gl.TEXTURE_CUBE_MAP_NEGATIVE_Y, faceColor: '#ADD8E6', textColor: '#F00', text: '4' },
+		{ target: gl.TEXTURE_CUBE_MAP_POSITIVE_Z, faceColor: '#ADD8E6', textColor: '#F00', text: '5' },
+		{ target: gl.TEXTURE_CUBE_MAP_NEGATIVE_Z, faceColor: '#ADD8E6', textColor: '#F00', text: '6' },
+		];
+		var facei;
+		for(facei=0;facei<6;facei++){
+			const {target, faceColor, textColor, text} = faceInfos[facei];
+			generateFace(ctx, faceColor, textColor, text, facei);
+
+			// Upload the canvas to the cubemap face.
+			const level = 0;
+			const internalFormat = gl.RGBA;
+			const format = gl.RGBA;
+			const type = gl.UNSIGNED_BYTE;
+			gl.texImage2D(target, level, internalFormat, format, type, ctx.canvas);
+		}
+		gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+		gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+	}	
+	
+function generateFace(ctx, faceColor, textColor, text, facei) {
+
+//offbits
+  const {width, height} = ctx.canvas;
+  ctx.fillStyle = faceColor;
+  ctx.fillRect(0, 0, width, height);
+  var i,j;
+  for(i=0;i<8;i++){
+    for(j=0;j<8;j++){
+      ctx.strokeRect(i*16,j*16,16,16);
+    }
+  }
+  
+  
+  ///on bits
+  ctx.fillStyle = '#F0E68C';
+	if(facei==0){
+		var ctl;
+		for(ctl=256;ctl<320;ctl++){
+			itl = ctl-256;
+			if(cells[ctl].status){
+				ctx.fillRect((itl%8)*16,Math.floor(itl/8)*16,16,16);
+			}
+	
+  
+		}
+	}
+	if(facei==1){
+		var ctl;
+		for(ctl=128;ctl<192;ctl++){
+			itl = ctl-128;
+			if(cells[ctl].status){
+				ctx.fillRect((itl%8)*16,Math.floor(itl/8)*16,16,16);
+			}
+		}
+	}
+	if(facei==2){
+		var ctl;
+		for(ctl=0;ctl<64;ctl++){
+			itl=ctl;
+			if(cells[ctl].status){
+				ctx.fillRect((itl%8)*16,Math.floor(itl/8)*16,16,16);
+			}
+		}
+	}
+	if(facei==3){
+		var ctl;
+		for(ctl=320;ctl<384;ctl++){
+			itl = ctl-320;
+			if(cells[ctl].status){
+				ctx.fillRect((itl%8)*16,Math.floor(itl/8)*16,16,16);
+			}
+		}
+	}
+	if(facei==4){
+		var ctl;
+		
+		for(ctl=192;ctl<256;ctl++){
+			itl = ctl-192;
+			if(cells[ctl].status){
+				ctx.fillRect((itl%8)*16,Math.floor(itl/8)*16,16,16);
+			}
+		}
+	}
+	
+	if(facei==5){
+		var ctl;		
+		for(ctl=64;ctl<128;ctl++){
+			itl = ctl-64;
+			if(cells[ctl].status){
+				ctx.fillRect((itl%8)*16,Math.floor(itl/8)*16,16,16);
+			}
+		}
+	}
+  
+  
+  //number
+  ctx.font = `${width * 0.7}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = textColor;
+//  ctx.fillText(text, width / 2, height / 2);
+}
+
+
+
+
+ function sspaceship(){
 				cells[81].status = true;
 				cells[97].status = true;
 				cells[106].status = true;
@@ -384,45 +792,16 @@
 				cells[220].status = true;
 				draw();
 			}
-			
-			function run(){
-				setTimeout(step,100);
-				setTimeout(step,200);
-				setTimeout(step,300);
-				setTimeout(step,400);
-				setTimeout(step,500);
-				setTimeout(step,600);
-				setTimeout(step,700);
-				setTimeout(step,800);
-				setTimeout(step,900);
-				setTimeout(step,1000);
-			}
-				
-			
-			function random(){
-				var ag;
-				for(ag=0;ag<384;ag++){
-					if(Math.random() < 0.5){
-						cells[ag].status=true;
-					}
-					else{
-						cells[ag].status=false;
-					}
-				}
-				draw();
-						
-			}
-			
+
 			
 			
 
 		</script>
+		
 
 
 
-	</body>
-	
-	
-	
-	
+
+	</body>	
 </html>
+
